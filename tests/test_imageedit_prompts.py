@@ -255,6 +255,73 @@ def test_run_with_grok_special_case_selectors(monkeypatch, tmp_path):
     assert parsed.params["image_urls"] == ["https://example.com/source.png"]
 
 
+def test_run_with_fibo_edit_plain_text_uses_instruction(monkeypatch, tmp_path):
+    client, prompts_dir, _ = _make_client(tmp_path)
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+
+    captured = {}
+
+    def fake_generate(parsed):
+        captured["parsed"] = parsed
+        return [Path("assets/fibo-edit-1.png")], ["https://example.com/fibo-edit-1.png"]
+
+    monkeypatch.setattr(
+        "imageedit.services.generation.generate_images_with_urls", fake_generate
+    )
+
+    response = client.post(
+        "/",
+        data={
+            "prompt_name": "",
+            "prompt_text": "replace the sky with storm clouds",
+            "model_name": "fibo-edit",
+            "image_urls": "https://example.com/source.png",
+            "action": "run",
+        },
+    )
+
+    assert "Generated 1 image" in response.get_data(as_text=True)
+    parsed = captured["parsed"]
+    assert parsed.model == "fibo-edit"
+    assert parsed.params["instruction"] == "replace the sky with storm clouds"
+    assert "structured_instruction" not in parsed.params
+    assert "prompt" not in parsed.params
+
+
+def test_run_with_fibo_edit_json_uses_structured_instruction(monkeypatch, tmp_path):
+    client, prompts_dir, _ = _make_client(tmp_path)
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+
+    captured = {}
+
+    def fake_generate(parsed):
+        captured["parsed"] = parsed
+        return [Path("assets/fibo-edit-1.png")], ["https://example.com/fibo-edit-1.png"]
+
+    monkeypatch.setattr(
+        "imageedit.services.generation.generate_images_with_urls", fake_generate
+    )
+
+    structured_text = '{"edit": "replace sky", "target": "background"}'
+    response = client.post(
+        "/",
+        data={
+            "prompt_name": "",
+            "prompt_text": structured_text,
+            "model_name": "fibo-edit",
+            "image_urls": "https://example.com/source.png",
+            "action": "run",
+        },
+    )
+
+    assert "Generated 1 image" in response.get_data(as_text=True)
+    parsed = captured["parsed"]
+    assert parsed.model == "fibo-edit"
+    assert parsed.params["structured_instruction"] == structured_text
+    assert "instruction" not in parsed.params
+    assert "prompt" not in parsed.params
+
+
 def test_asset_load_uses_exif_size_and_image_urls(monkeypatch, tmp_path):
     client, _, assets_dir = _make_client(tmp_path)
     assets_dir.mkdir(parents=True, exist_ok=True)
@@ -352,6 +419,30 @@ def test_parse_exif_description_extracts_model_and_prompt():
     assert result["prompt"] == "hello world"
     assert result["image_size"] == "auto_3K"
     assert result["image_urls"] == ["https://example.com/a.png"]
+
+
+def test_parse_exif_description_extracts_instruction_as_prompt_text():
+    text = (
+        '{"arguments":{"instruction":"replace sky","image_url":"https://example.com/a.png"},'
+        '"call":"run","endpoint":"x","model":"fibo-edit"}'
+    )
+    result = parse_exif_description(text)
+
+    assert result["model"] == "fibo-edit"
+    assert result["prompt"] == "replace sky"
+    assert result["image_url"] == "https://example.com/a.png"
+
+
+def test_parse_exif_description_extracts_structured_instruction_as_prompt_text():
+    structured_text = '{"edit":"replace sky"}'
+    text = (
+        '{"arguments":{"structured_instruction":"{\\"edit\\":\\"replace sky\\"}"},'
+        '"call":"run","endpoint":"x","model":"fibo-edit"}'
+    )
+    result = parse_exif_description(text)
+
+    assert result["model"] == "fibo-edit"
+    assert result["prompt"] == structured_text
 
 
 def test_normalize_exif_text_repairs_mojibake():

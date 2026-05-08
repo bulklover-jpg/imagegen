@@ -13,6 +13,8 @@ from imagegen.options import parse_args
 
 from .uploads import log_generated_images, log_generation_request, resolve_upload_ids
 
+_STRUCTURED_INSTRUCTION_MODEL = "fibo-edit"
+
 
 def run_generation(
     *,
@@ -29,16 +31,18 @@ def run_generation(
     style_name: str | None = None,
 ) -> dict[str, Any]:
     args: list[str] = [selected_model, "--no-preview"]
-    if prompt_path is not None:
-        args.extend(["-f", str(prompt_path)])
-    elif prompt_text and prompt_text.strip():
-        args.extend(["-p", prompt_text])
-    else:
+    text_argument = _text_argument_args(
+        selected_model=selected_model,
+        prompt_path=prompt_path,
+        prompt_text=prompt_text,
+    )
+    if not text_argument:
         return {
             "error": "Prompt text is required.",
             "paths": [],
             "message": None,
         }
+    args.extend(text_argument)
     if include_prompt_metadata:
         args.append("-a")
     if image_size.strip():
@@ -85,7 +89,7 @@ def run_generation(
         return {"error": str(exc), "paths": [], "message": None}
     generation_completed_at = time.time()
 
-    prompt_value = parsed.params.get("prompt", "")
+    prompt_value = _prompt_log_value(parsed.params)
     prompt_text = prompt_value.strip() if isinstance(prompt_value, str) else ""
     seed_value = parsed.params.get("seed")
     image_size_value = parsed.params.get("image_size")
@@ -115,3 +119,34 @@ def run_generation(
     path_strings = [str(path) for path in paths]
     message = f"Generated {len(path_strings)} image(s) with '{selected_model}'."
     return {"error": None, "paths": path_strings, "message": message}
+
+
+def _text_argument_args(
+    *,
+    selected_model: str,
+    prompt_path: Path | None,
+    prompt_text: str | None,
+) -> list[str]:
+    if selected_model == _STRUCTURED_INSTRUCTION_MODEL:
+        if not prompt_text or not prompt_text.strip():
+            return []
+        text = prompt_text.strip()
+        try:
+            json.loads(text)
+        except json.JSONDecodeError:
+            return ["--instruction", text]
+        return ["--structured-instruction", text]
+
+    if prompt_path is not None:
+        return ["-f", str(prompt_path)]
+    if prompt_text and prompt_text.strip():
+        return ["-p", prompt_text]
+    return []
+
+
+def _prompt_log_value(params: dict[str, Any]) -> Any:
+    for key in ("prompt", "instruction", "structured_instruction"):
+        value = params.get(key)
+        if value is not None:
+            return value
+    return ""

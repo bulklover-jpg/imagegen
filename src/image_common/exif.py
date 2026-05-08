@@ -43,7 +43,12 @@ def parse_exif_description(text: str) -> dict[str, Any]:
                 result["prompt_name"] = data.get("prompt_name")
                 arguments = data.get("arguments", {})
                 if isinstance(arguments, dict):
-                    result["prompt"] = arguments.get("prompt")
+                    prompt = arguments.get("prompt")
+                    if prompt is None:
+                        prompt = arguments.get("instruction")
+                    if prompt is None:
+                        prompt = arguments.get("structured_instruction")
+                    result["prompt"] = prompt
                     image_size = arguments.get("image_size")
                     if isinstance(image_size, str):
                         result["image_size"] = image_size
