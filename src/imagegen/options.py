@@ -250,6 +250,8 @@ def _add_standard_option(
         kwargs["action"] = option["action"]
     if "metavar" in option:
         kwargs["metavar"] = option["metavar"]
+    if "choices" in option:
+        kwargs["choices"] = tuple(str(choice) for choice in option["choices"])
 
     if kwargs.get("action") == "append":
         parser.add_argument(*flags, **kwargs)

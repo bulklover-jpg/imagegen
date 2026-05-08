@@ -30,6 +30,7 @@ from imagegen.registry import MODEL_REGISTRY
 from .forms import (
     default_option,
     get_allowed_sizes,
+    get_allowed_values,
     image_input_mode,
     model_supports_image_urls,
     parse_checkbox,
@@ -132,6 +133,12 @@ def index() -> str:
     image_size_value = request.form.get(
         "image_size_preset", default_option(selected_model, "image_size")
     )
+    aspect_ratio_value = request.form.get(
+        "aspect_ratio_preset", default_option(selected_model, "aspect_ratio")
+    )
+    resolution_value = request.form.get(
+        "resolution_preset", default_option(selected_model, "resolution")
+    )
     include_prompt_metadata = parse_checkbox(
         request.form.getlist("include_prompt_metadata"), default=True
     )
@@ -195,6 +202,10 @@ def index() -> str:
 
                     if isinstance(exif_data.get("image_size"), str):
                         image_size_value = exif_data["image_size"]
+                    if isinstance(exif_data.get("aspect_ratio"), str):
+                        aspect_ratio_value = exif_data["aspect_ratio"]
+                    if isinstance(exif_data.get("resolution"), str):
+                        resolution_value = exif_data["resolution"]
 
                     image_urls = exif_data.get("image_urls")
                     if isinstance(image_urls, list):
@@ -225,6 +236,8 @@ def index() -> str:
                         prompt_text=prompt_text,
                         include_prompt_metadata=include_prompt_metadata,
                         image_size=image_size_value,
+                        aspect_ratio=aspect_ratio_value,
+                        resolution=resolution_value,
                         image_urls=image_urls_text if supports_image_urls else "",
                         image_input_mode=input_mode,
                         style_name=selected_style,
@@ -248,6 +261,18 @@ def index() -> str:
     input_mode = image_input_mode(selected_model)
     supports_image_urls = input_mode != "none"
     allowed_sizes = get_allowed_sizes(selected_model)
+    aspect_ratio_choices = get_allowed_values(selected_model, "aspect_ratio")
+    resolution_choices = get_allowed_values(selected_model, "resolution")
+    if image_size_value not in allowed_sizes:
+        image_size_value = default_option(selected_model, "image_size")
+    if not aspect_ratio_choices:
+        aspect_ratio_value = ""
+    elif aspect_ratio_value not in aspect_ratio_choices:
+        aspect_ratio_value = default_option(selected_model, "aspect_ratio")
+    if not resolution_choices:
+        resolution_value = ""
+    elif resolution_value not in resolution_choices:
+        resolution_value = default_option(selected_model, "resolution")
     assets_dir = Path(current_app.config["ASSETS_DIR"])
     asset_paths = list_asset_paths(assets_dir)
     gallery_limit = gallery_width * gallery_height
@@ -266,6 +291,10 @@ def index() -> str:
         selected_model=selected_model,
         image_size_value=image_size_value,
         allowed_sizes=allowed_sizes,
+        aspect_ratio_value=aspect_ratio_value,
+        aspect_ratio_choices=aspect_ratio_choices,
+        resolution_value=resolution_value,
+        resolution_choices=resolution_choices,
         include_prompt_metadata=include_prompt_metadata,
         supports_image_urls=supports_image_urls,
         image_input_mode=input_mode,
@@ -368,12 +397,36 @@ def api_model_sizes(model: str):
     """Return allowed sizes for a given model as JSON."""
     sizes = get_allowed_sizes(model)
     default = default_option(model, "image_size")
+    aspect_ratios = get_allowed_values(model, "aspect_ratio")
+    aspect_ratio_default = default_option(model, "aspect_ratio")
+    resolutions = get_allowed_values(model, "resolution")
+    resolution_default = default_option(model, "resolution")
     supports_urls = model_supports_image_urls(model)
     input_mode = image_input_mode(model)
     return jsonify(
         {
             "sizes": sizes,
             "default": default,
+            "selectors": {
+                "image_size": {
+                    "choices": sizes,
+                    "default": default,
+                }
+                if sizes
+                else None,
+                "aspect_ratio": {
+                    "choices": aspect_ratios,
+                    "default": aspect_ratio_default,
+                }
+                if aspect_ratios
+                else None,
+                "resolution": {
+                    "choices": resolutions,
+                    "default": resolution_default,
+                }
+                if resolutions
+                else None,
+            },
             "supports_image_urls": supports_urls,
             "image_input_mode": input_mode,
         }

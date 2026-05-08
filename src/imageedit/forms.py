@@ -40,12 +40,31 @@ def default_option(model: str, option_name: str) -> str:
     return str(default)
 
 
+def get_allowed_values(model: str, option_name: str) -> list[str]:
+    model_info = MODEL_REGISTRY.get(model, {})
+    options = model_info.get("options", {})
+    option = options.get(option_name, {})
+    return _allowed_values(option)
+
+
+def _allowed_values(option: dict[str, Any]) -> list[str]:
+    allowed = option.get("allowed_sizes") or option.get("choices") or ()
+    values: list[str] = []
+    seen: set[str] = set()
+    for value in allowed:
+        normalized = str(value)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        values.append(normalized)
+    return values
+
+
 def get_allowed_sizes(model: str) -> list[str]:
     _, spec = size_option_spec(model)
-    allowed = spec.get("allowed_sizes") if spec else None
-    if not allowed:
+    if not spec:
         return []
-    return sorted(str(value) for value in allowed)
+    return _allowed_values(spec)
 
 
 def model_supports_image_urls(model: str) -> bool:

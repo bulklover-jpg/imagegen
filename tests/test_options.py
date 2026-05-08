@@ -253,6 +253,41 @@ def test_parser_does_not_require_common_keys():
                 },
             },
         ),
+        (
+            ["grok", "-p", "hi"],
+            {
+                "model": "grok",
+                "params": {
+                    "prompt": "hi",
+                    "num_images": 1,
+                    "aspect_ratio": "1:1",
+                    "resolution": "1k",
+                    "output_format": "jpeg",
+                    "sync_mode": False,
+                },
+            },
+        ),
+        (
+            [
+                "grok-edit",
+                "-p",
+                "hi",
+                "--image-url",
+                "https://example.com/src.png",
+            ],
+            {
+                "model": "grok-edit",
+                "params": {
+                    "prompt": "hi",
+                    "image_urls": ["https://example.com/src.png"],
+                    "num_images": 1,
+                    "aspect_ratio": "auto",
+                    "resolution": "1k",
+                    "output_format": "jpeg",
+                    "sync_mode": False,
+                },
+            },
+        ),
     ],
 )
 def test_parse_basic(argv, expected):

@@ -22,6 +22,8 @@ def run_generation(
     prompt_text: str | None,
     include_prompt_metadata: bool,
     image_size: str,
+    aspect_ratio: str,
+    resolution: str,
     image_urls: str,
     image_input_mode: str,
     style_name: str | None = None,
@@ -41,6 +43,10 @@ def run_generation(
         args.append("-a")
     if image_size.strip():
         args.extend(["-i", image_size.strip()])
+    if aspect_ratio.strip():
+        args.extend(["--aspect-ratio", aspect_ratio.strip()])
+    if resolution.strip():
+        args.extend(["--resolution", resolution.strip()])
     urls = split_multivalue_field(image_urls)
     if image_input_mode == "single":
         if len(urls) > 1:

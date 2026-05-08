@@ -503,7 +503,11 @@ function initShortcuts() {
     const generateBtn = document.querySelector('button[name="action"][value="run"]');
     const promptTextarea = document.getElementById('prompt-text');
     const modelSelect = document.getElementById('model-name');
-    const sizeSelect = document.getElementById('image-size-preset');
+    const sizeSelects = [
+        document.getElementById('image-size-preset'),
+        document.getElementById('aspect-ratio-preset'),
+        document.getElementById('resolution-preset'),
+    ];
     const styleSelect = document.getElementById('style-name-preset');
     const insertStyleBtn = document.getElementById('insert-style-btn');
 
@@ -567,7 +571,8 @@ function initShortcuts() {
             if (modelSelect) modelSelect.focus();
             e.preventDefault();
         } else if (key === 'D') {
-            if (sizeSelect) sizeSelect.focus();
+            const visibleSelect = sizeSelects.find(select => select && !select.disabled && select.offsetParent !== null);
+            if (visibleSelect) visibleSelect.focus();
             e.preventDefault();
         } else if (key === 'S') {
             if (styleSelect) styleSelect.focus();
@@ -1041,9 +1046,48 @@ function initDualInputs() {
  */
 function initModelSizeSync() {
     const modelSelect = document.getElementById('model-name');
-    const sizeSelect = document.getElementById('image-size-preset');
+    const selectorGroups = {
+        image_size: {
+            group: document.getElementById('image-size-group'),
+            select: document.getElementById('image-size-preset'),
+        },
+        aspect_ratio: {
+            group: document.getElementById('aspect-ratio-group'),
+            select: document.getElementById('aspect-ratio-preset'),
+        },
+        resolution: {
+            group: document.getElementById('resolution-group'),
+            select: document.getElementById('resolution-preset'),
+        },
+    };
 
-    if (!modelSelect || !sizeSelect) return;
+    if (!modelSelect) return;
+
+    const updateSelector = (config, descriptor) => {
+        if (!config?.group || !config.select) return;
+
+        config.select.innerHTML = '';
+
+        if (!descriptor || !Array.isArray(descriptor.choices) || descriptor.choices.length === 0) {
+            config.group.style.display = 'none';
+            config.select.disabled = true;
+            return;
+        }
+
+        descriptor.choices.forEach(choice => {
+            const option = document.createElement('option');
+            option.value = choice;
+            option.textContent = choice;
+            if (choice === descriptor.default) {
+                option.selected = true;
+            }
+            config.select.appendChild(option);
+        });
+
+        config.select.value = descriptor.default || descriptor.choices[0];
+        config.select.disabled = false;
+        config.group.style.display = 'block';
+    };
 
     modelSelect.addEventListener('change', async () => {
         const model = modelSelect.value;
@@ -1054,8 +1098,7 @@ function initModelSizeSync() {
             if (!response.ok) return;
 
             const data = await response.json();
-            const sizes = data.sizes || [];
-            const defaultSize = data.default || '';
+            const selectors = data.selectors || {};
             const supportsUrls = data.supports_image_urls;
             const inputMode = data.image_input_mode || 'none';
 
@@ -1078,21 +1121,9 @@ function initModelSizeSync() {
                     : 'No edit model available for the current selection.';
             });
 
-            // Clear existing options
-            sizeSelect.innerHTML = '';
-
-            // Add options
-            sizes.forEach(size => {
-                const option = document.createElement('option');
-                option.value = size;
-                option.textContent = size;
-                if (size === defaultSize) {
-                    option.selected = true;
-                }
-                sizeSelect.appendChild(option);
-            });
-            // Ensure default is selected
-            sizeSelect.value = defaultSize;
+            updateSelector(selectorGroups.image_size, selectors.image_size);
+            updateSelector(selectorGroups.aspect_ratio, selectors.aspect_ratio);
+            updateSelector(selectorGroups.resolution, selectors.resolution);
 
         } catch (err) {
             console.error('Failed to fetch model sizes:', err);

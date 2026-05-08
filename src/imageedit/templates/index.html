@@ -68,11 +68,36 @@
           </select>
         </div>
 
-        <div class="control-group" data-group="size">
+        <div class="control-group" id="image-size-group" data-group="size" {% if not allowed_sizes %}style="display:none;"
+          {% endif %}>
           <label for="image-size-preset">Dimensions / Preset</label>
-          <select id="image-size-preset" name="image_size_preset" title="(D) Choose the dimensions preset.">
+          <select id="image-size-preset" name="image_size_preset" title="(D) Choose the dimensions preset." {% if not
+            allowed_sizes %}disabled{% endif %}>
             {% for size in allowed_sizes %}
             <option value="{{ size }}" {% if size==image_size_value %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="control-group" id="aspect-ratio-group" {% if not aspect_ratio_choices %}style="display:none;" {%
+          endif %}>
+          <label for="aspect-ratio-preset">Aspect Ratio</label>
+          <select id="aspect-ratio-preset" name="aspect_ratio_preset" title="(D) Choose the aspect ratio." {% if not
+            aspect_ratio_choices %}disabled{% endif %}>
+            {% for ratio in aspect_ratio_choices %}
+            <option value="{{ ratio }}" {% if ratio==aspect_ratio_value %}selected{% endif %}>{{ ratio }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="control-group" id="resolution-group" {% if not resolution_choices %}style="display:none;" {% endif
+          %}>
+          <label for="resolution-preset">Resolution</label>
+          <select id="resolution-preset" name="resolution_preset" title="Choose the resolution preset." {% if not
+            resolution_choices %}disabled{% endif %}>
+            {% for resolution in resolution_choices %}
+            <option value="{{ resolution }}" {% if resolution==resolution_value %}selected{% endif %}>{{ resolution }}
+            </option>
             {% endfor %}
           </select>
         </div>
@@ -307,7 +332,7 @@
           <p><strong>g</strong> Generate image</p>
           <p><strong>p</strong> Focus prompt editor</p>
           <p><strong>m</strong> Focus model selector</p>
-          <p><strong>D</strong> Focus dimensions selector</p>
+          <p><strong>D</strong> Focus size-related selector</p>
           <p><strong>S</strong> Focus style selector</p>
           <p><strong>I</strong> Insert style to prompt</p>
         </div>

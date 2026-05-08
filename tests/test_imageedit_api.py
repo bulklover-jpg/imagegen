@@ -7,6 +7,7 @@ from pathlib import Path
 from imageedit.app import (
     _default_option,
     _get_allowed_sizes,
+    _get_allowed_values,
     _model_supports_image_urls,
     create_app,
 )
@@ -222,6 +223,28 @@ def test_api_model_sizes_flags_image_urls_support(tmp_path):
     payload = response.get_json()
 
     assert payload["supports_image_urls"] is True
+
+
+def test_api_model_sizes_exposes_grok_selectors(tmp_path):
+    client, _, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
+
+    response = client.get("/api/model-sizes/grok-edit", headers=headers)
+    payload = response.get_json()
+
+    assert payload["selectors"]["image_size"] is None
+    assert payload["selectors"]["aspect_ratio"]["choices"] == _get_allowed_values(
+        "grok-edit", "aspect_ratio"
+    )
+    assert payload["selectors"]["aspect_ratio"]["default"] == _default_option(
+        "grok-edit", "aspect_ratio"
+    )
+    assert payload["selectors"]["resolution"]["choices"] == _get_allowed_values(
+        "grok-edit", "resolution"
+    )
+    assert payload["selectors"]["resolution"]["default"] == _default_option(
+        "grok-edit", "resolution"
+    )
 
 
 def test_api_upload_rejects_oversize_file(tmp_path, monkeypatch):

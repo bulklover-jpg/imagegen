@@ -26,6 +26,7 @@ from imagegen.registry import MODEL_REGISTRY
 from .forms import (
     default_option,
     get_allowed_sizes,
+    get_allowed_values,
     model_supports_image_urls,
     parse_checkbox,
 )
@@ -164,6 +165,7 @@ def _init_storage_dirs(app: Flask) -> None:
 
 
 _default_option = default_option
+_get_allowed_values = get_allowed_values
 _get_allowed_sizes = get_allowed_sizes
 _parse_checkbox = parse_checkbox
 _model_supports_image_urls = model_supports_image_urls
@@ -173,6 +175,7 @@ _prompt_name_from_asset_filename = prompt_name_from_asset_filename
 __all__ = [
     "create_app",
     "_default_option",
+    "_get_allowed_values",
     "_get_allowed_sizes",
     "_parse_checkbox",
     "_model_supports_image_urls",

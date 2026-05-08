@@ -220,6 +220,41 @@ def test_run_with_image_urls(monkeypatch, tmp_path):
     assert parsed.preview_assets is False
 
 
+def test_run_with_grok_special_case_selectors(monkeypatch, tmp_path):
+    client, prompts_dir, _ = _make_client(tmp_path)
+    prompts_dir.mkdir(parents=True, exist_ok=True)
+
+    captured = {}
+
+    def fake_generate(parsed):
+        captured["parsed"] = parsed
+        return [Path("assets/grok-edit-1.png")], ["https://example.com/grok-edit-1.png"]
+
+    monkeypatch.setattr(
+        "imageedit.services.generation.generate_images_with_urls", fake_generate
+    )
+
+    response = client.post(
+        "/",
+        data={
+            "prompt_name": "",
+            "prompt_text": "replace the background",
+            "model_name": "grok-edit",
+            "aspect_ratio_preset": "16:9",
+            "resolution_preset": "2k",
+            "image_urls": "https://example.com/source.png",
+            "action": "run",
+        },
+    )
+
+    assert "Generated 1 image" in response.get_data(as_text=True)
+    parsed = captured["parsed"]
+    assert parsed.model == "grok-edit"
+    assert parsed.params["aspect_ratio"] == "16:9"
+    assert parsed.params["resolution"] == "2k"
+    assert parsed.params["image_urls"] == ["https://example.com/source.png"]
+
+
 def test_asset_load_uses_exif_size_and_image_urls(monkeypatch, tmp_path):
     client, _, assets_dir = _make_client(tmp_path)
     assets_dir.mkdir(parents=True, exist_ok=True)
@@ -253,6 +288,39 @@ def test_asset_load_uses_exif_size_and_image_urls(monkeypatch, tmp_path):
     assert 'id="image-urls-group" data-input-mode="multi"' in body
     assert "https://example.com/source-a.png" in body
     assert "https://example.com/source-b.png" in body
+
+
+def test_asset_load_uses_exif_aspect_ratio_and_resolution(monkeypatch, tmp_path):
+    client, _, assets_dir = _make_client(tmp_path)
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    asset_path = assets_dir / "loaded_grok_1.png"
+    asset_path.write_bytes(b"not a real image")
+
+    monkeypatch.setattr(
+        "imageedit.routes.extract_prompt_from_exif",
+        lambda _path: {
+            "prompt": "loaded prompt",
+            "model": "grok-edit",
+            "aspect_ratio": "16:9",
+            "resolution": "2k",
+            "image_urls": ["https://example.com/source-a.png"],
+        },
+    )
+
+    response = client.post(
+        "/",
+        data={
+            "asset_filename": "loaded_grok_1.png",
+            "action": "asset_load",
+        },
+    )
+
+    body = response.get_data(as_text=True)
+    assert '<option value="grok-edit" selected>' in body
+    assert '<option value="16:9" selected>' in body
+    assert '<option value="2k" selected>' in body
+    assert 'id="aspect-ratio-group"' in body
+    assert 'id="resolution-group"' in body
 
 
 def test_asset_route_rejects_non_images(tmp_path):

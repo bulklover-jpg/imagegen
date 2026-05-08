@@ -147,7 +147,7 @@ A companion Flask app, `imageedit`, lets you manage prompt and style files and t
 Features
 - Prompt CRUD backed by `prompts/` (save, duplicate, delete) with modal confirmations.
 - Style CRUD backed by `styles/`, plus quick insert into the prompt editor.
-- Model selection and preset size selector synced to the registry via `/api/model-sizes`.
+- Model selection and registry-driven parameter selectors for size, aspect ratio, and resolution via `/api/model-sizes`.
 - Optional source image URLs (`-u`) with local file uploads sent to fal storage.
 - Recent uploads panel backed by `/api/upload-history`.
 - Asset gallery with EXIF-based prompt reload and quick delete.
